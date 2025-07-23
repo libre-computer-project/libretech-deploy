@@ -1,0 +1,107 @@
+#!/bin/bash
+
+set -e
+
+LDP_VENDOR=$(cat /sys/class/dmi/id/board_vendor)
+LDP_BOARD=$(cat /sys/class/dmi/id/board_name)
+LDP_PRODUCT=
+
+LDP_askUsername(){
+	:
+}
+LDP_askPassword(){
+	:
+}
+LDP_askHostname(){
+	:
+}
+LDP_askDevice(){
+	:
+}
+LDP_getDeviceType(){
+	:
+}
+LDP_checkBlockDevs(){
+	blockdevs=$(lsblk -o NAME -n -d | grep -v mtdblock | grep -v 'boot[0-9]$')
+	if [ -z "$blockdevs" ]; then
+		echo "No suitable storage devices detected."
+	fi
+}
+LDP_populateArch(){
+	case `uname -m` in
+		aarch64)
+			LDP_ARCH=arm64
+			;;
+	esac
+}
+LDP_LC_VENDOR="LC"
+LDP_LC_BASE_URL='https://distro.libre.computer/ci'
+LDP_LC_checkInput(){
+	:
+}
+LDP_LC(){
+	LDP_checkBlockDevs
+	LDP_populateArch
+	LDP_LC_checkInput "$@"
+	local path=("${@:1:2}")
+	local path=$(IFS=/; echo "${path[*]}")
+	local path_url="$LDP_LC_BASE_URL/$path"
+	local html=$(curl "$path_url/")
+	if [ $? -ne 0 ]; then
+		echo "$VENDOR $@ is not supported." >&2
+		return 1
+	fi
+	local results="$(echo "$html" | xmllint --html --xpath '//a[not(@href="../") and not(starts-with(@href, "?"))]/text()' - 2>/dev/null)"
+	if [ $? -ne 0 ] || [ -z "$results" ]; then
+		echo "$VENDOR $@ is not supported." >&2
+		return 1
+	fi
+	local results="$(echo "$results" | grep -v SHA256SUMS | sed 's/\/$//')"
+	if [ -z "$2" ]; then
+		echo "$results"
+		return 0
+	fi
+	if [ -z "$3" ]; then
+		local variants="$(echo "$results" | grep +LDP_BOARD)"
+		if [ -z "$variants" ]; then
+			local variants="$(echo "$results" | grep +$LDP_ARCH)"
+		fi
+		echo "$variants"
+		return 0
+	fi
+	local image="$(echo "$results" | grep "$3" | grep +$LDP_BOARD | head -n 1)"
+	if [ -z "$image" ]; then
+		local image="$(echo "$results" | grep "$3" | grep +$LDP_ARCH | head -n 1)"
+	fi
+	if [ -z "$image" ]; then
+		echo "$VENDOR $@ is not supported." >&2
+		exit 1
+	fi
+
+	local image_url="$path_url/$image"
+	echo "Using image: $image_url"
+	if [ -z "$4" ]; then
+		echo "$blockdevs"
+		return 0
+	elif [ -z "$(echo \"$blockdevs\" | grep $4)" ]; then
+		echo "$4 is not in:"
+		echo "$blockdevs"
+		exit 1
+	fi
+	wget -O - "$image_url" | bsdcat | dd of=/dev/$4 bs=1M
+}
+
+if [ -z "$1" ]; then
+	echo "$0 VENDOR [PATH]" >&2
+	exit 1
+fi
+
+VENDOR="${1^^}"
+shift
+if type -t LDP_$VENDOR > /dev/null; then
+	LDP_checkBlockDevs
+	LDP_$VENDOR $@
+else
+	echo "$VENDOR is not supported." >&2
+	exit 1
+fi
