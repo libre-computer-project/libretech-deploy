@@ -1,0 +1,25 @@
+#!/bin/bash
+
+set -e -o pipefail
+
+LDP_VENDOR=$(cat /sys/class/dmi/id/board_vendor)
+LDP_BOARD=$(cat /sys/class/dmi/id/board_name)
+
+LDP_main(){
+	if [ -z "$1" ]; then
+		echo "$0 VENDOR [PATH]" >&2
+		exit 1
+	fi
+
+	VENDOR="${1^^}"
+	shift
+	if type -t ${VENDOR}_main > /dev/null; then
+		LDP_BLOCK_setEnv
+		LDP_ARCH_setEnv
+		${VENDOR}_main $@
+	else
+		echo "$1 is not supported." >&2
+		exit 1
+	fi
+}
+LDP_main "$@"

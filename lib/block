@@ -1,0 +1,40 @@
+#!/bin/bash
+LDP_BLOCK_PREFIX="/dev"
+LDP_BLOCK_setEnv(){
+	LDP_BLOCK_devices=$(lsblk -o NAME -n -d | grep -v mtdblock | grep -v 'boot[0-9]$')
+	if [ -z "$LDP_BLOCK_devices" ]; then
+		echo "No suitable block devices detected."
+		return 1
+	fi
+}
+
+LDP_BLOCK_clearPartitionTable(){
+	sgdisk --clear "$LDP_BLOCK_PREFIX/$1"
+}
+LDP_BLOCK_checkDevice(){
+	local block_device="$LDP_BLOCK_PREFIX/$1"
+	if [ ! -b "$block_device" ]; then
+		echo "$block_device is not a valid block device." >&2
+		return 1
+	fi
+}
+_LDP_BLOCK_clearDevice(){
+	local block_device="$LDP_BLOCK_PREFIX/$1"
+	if ! blkdiscard -f "$block_device" >&2; then
+		LDP_BLOCK_clearPartitionTable "$1" >&2
+	fi
+	echo -n "conv=sparse"
+}
+_LDP_BLOCK_flashURL(){
+	local block_device="$LDP_BLOCK_PREFIX/$2"
+	LDP_BLOCK_checkDevice "$2"
+	local dd_sparse=$(_LDP_BLOCK_clearDevice "$2")
+	wget -nv -O - "$1" | $3 | dd iflag=fullblock of="$block_device" bs=1M $dd_sparse status=progress
+	sgdisk -e "$block_device"
+}
+LDP_BLOCK_flashURLTar(){
+	_LDP_BLOCK_flashURL "$@" "bsdtar -x -O"
+}
+LDP_BLOCK_flashURLRaw(){
+	_LDP_BLOCK_flashURL "$@" "bsdcat"
+}

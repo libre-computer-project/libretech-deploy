@@ -1,0 +1,61 @@
+#!/bin/bash
+FEDORA_VENDOR="FEDORA"
+FEDORA_BASE_URL='https://download.fedoraproject.org/pub/fedora/linux/releases'
+FEDORA_RELEASE_IGNORE="^[0-9]\$\|[123][0-9]"
+FEDORA_VARIANT_IGNORE="COMPOSE_ID\|Cloud\|Containe\|COSMIC-Atomic\|Everything\|Kinoite\|Onyx\|Sericea\|Silverblue"
+FEDORA_checkInput(){
+	:
+}
+FEDORA_main(){
+	FEDORA_checkInput "$@"
+	local path=("${@:1:2}")
+	local path=$(IFS=/; echo "${path[*]}")
+	local path_url="$FEDORA_BASE_URL/$path"
+	if [ ! -z "$2" ]; then
+		local path_url="$path_url/$LDP_ARCH_CPU/images"
+	fi
+	echo $path_url
+	local html=$(curl -L "$path_url/")
+	if [ $? -ne 0 ]; then
+		echo "$VENDOR $@ is not supported." >&2
+		return 1
+	fi
+	if [ -z "$1" ] || [ -z "$2" ]; then
+		local html_xpath='//a[not(starts-with(@href, "/")) and not(contains(@href, "?")) and substring(normalize-space(text()), string-length(normalize-space(text())) - string-length("/") + 1, string-length("/")) = "/"]/text()'
+	else
+		local filename_match=".$LDP_ARCH_CPU.raw.xz"
+		local html_xpath="//a[substring(@href, string-length(@href) - string-length('$filename_match') + 1, string-length('$filename_match')) = '$filename_match']/@href"
+	fi
+	local results="$(echo "$html" | xmllint --html --xpath "$html_xpath" - 2>/dev/null)"
+	if [ $? -ne 0 ] || [ -z "$results" ]; then
+		echo "$VENDOR $@ is not supported." >&2
+		return 1
+	fi
+	if [ -z "$1" ] || [ -z "$2" ]; then
+		local results="$(echo "$results" | sed 's/\/$//')"
+	fi
+	if [ -z "$1" ]; then
+		echo "$results" | grep -v "$FEDORA_RELEASE_IGNORE" | tail -n 3
+		return 0
+	fi
+	if [ -z "$2" ]; then
+		echo "$results" | grep -v "$FEDORA_VARIANT_IGNORE"
+		return 0
+	fi
+	local image="$(echo "$results" | sed 's/^ href="//;s/"$//' | head -n 1)"
+	if [ -z "$image" ]; then
+		echo "$VENDOR $@ is not supported." >&2
+		exit 1
+	fi
+	local image_url="$path_url/$image"
+	echo "Using image: $image_url"
+	if [ -z "$3" ]; then
+		echo "$LDP_BLOCK_devices"
+		return 0
+	elif [ -z "$(echo \"$LDP_BLOCK_devices\" | grep $3)" ]; then
+		echo "$3 is not in:"
+		echo "$LDP_BLOCK_devices"
+		exit 1
+	fi
+	LDP_BLOCK_flashURLRaw "$image_url" "$3"
+}
