@@ -36,11 +36,11 @@ FEDORA_main(){
 	fi
 	if [ -z "$1" ]; then
 		echo "$results" | grep -v "$FEDORA_RELEASE_IGNORE" | tail -n 3
-		return 0
+		return $LDP_AUTO
 	fi
 	if [ -z "$2" ]; then
 		echo "$results" | grep -v "$FEDORA_VARIANT_IGNORE"
-		return 0
+		return $LDP_AUTO
 	fi
 	local image="$(echo "$results" | sed 's/^ href="//;s/"$//' | head -n 1)"
 	if [ -z "$image" ]; then
@@ -51,7 +51,7 @@ FEDORA_main(){
 	echo "Using image: $image_url"
 	if [ -z "$3" ]; then
 		echo "$LDP_BLOCK_devices"
-		return 0
+		return $LDP_AUTO
 	elif [ -z "$(echo \"$LDP_BLOCK_devices\" | grep $3)" ]; then
 		echo "$3 is not in:"
 		echo "$LDP_BLOCK_devices"

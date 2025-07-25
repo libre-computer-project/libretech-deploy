@@ -1,15 +1,15 @@
 #!/bin/bash
 LDP_BLOCK_PREFIX="/dev"
 LDP_BLOCK_setEnv(){
-	LDP_BLOCK_devices=$(lsblk -o NAME -n -d | grep -v mtdblock | grep -v 'boot[0-9]$')
-	if [ -z "$LDP_BLOCK_devices" ]; then
+	LDP_BLOCK_devices=$(lsblk -o NAME -n -d | grep -v mtdblock | grep -v 'boot[0-9]$' || true)
+	if [ -z $LDP_BLOCK_devices ]; then
 		echo "No suitable block devices detected."
 		return 1
 	fi
 }
 
 LDP_BLOCK_clearPartitionTable(){
-	sgdisk --clear "$LDP_BLOCK_PREFIX/$1"
+	sgdisk --clear -g "$LDP_BLOCK_PREFIX/$1"
 }
 LDP_BLOCK_checkDevice(){
 	local block_device="$LDP_BLOCK_PREFIX/$1"
@@ -20,17 +20,26 @@ LDP_BLOCK_checkDevice(){
 }
 _LDP_BLOCK_clearDevice(){
 	local block_device="$LDP_BLOCK_PREFIX/$1"
-	if ! blkdiscard -f "$block_device" >&2; then
+	if blkdiscard -f "$block_device" >&2; then
+		echo "Data on $block_device marked for discard." >&2
+		echo -n "conv=sparse"
+	else
 		LDP_BLOCK_clearPartitionTable "$1" >&2
+		echo "Partition table on $block_device cleared." >&2
 	fi
-	echo -n "conv=sparse"
 }
 _LDP_BLOCK_flashURL(){
 	local block_device="$LDP_BLOCK_PREFIX/$2"
 	LDP_BLOCK_checkDevice "$2"
 	local dd_sparse=$(_LDP_BLOCK_clearDevice "$2")
+	set -o pipefail
 	wget -nv -O - "$1" | $3 | dd iflag=fullblock of="$block_device" bs=1M $dd_sparse status=progress
-	sgdisk -e "$block_device"
+	set +o pipefail
+	local pt_type=$(blkid -s PTTYPE -o value "$block_device")
+	if [ "$pt_type" = "gpt" ]; then
+		echo "GPT partition table detected. Moving secondary header to end of device." >&2
+		sgdisk -e "$block_device"
+	fi
 }
 LDP_BLOCK_flashURLTar(){
 	_LDP_BLOCK_flashURL "$@" "bsdtar -x -O"

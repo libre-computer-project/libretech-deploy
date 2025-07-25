@@ -22,7 +22,7 @@ LC_main(){
 	local results="$(echo "$results" | grep -v SHA256SUMS | sed 's/\/$//')"
 	if [ -z "$2" ]; then
 		echo "$results"
-		return 0
+		return $LDP_AUTO
 	fi
 	if [ -z "$3" ]; then
 		local variants="$(echo "$results" | grep +LDP_BOARD)"
@@ -30,7 +30,7 @@ LC_main(){
 			local variants="$(echo "$results" | grep +$LDP_ARCH)"
 		fi
 		echo "$variants"
-		return 0
+		return $LDP_AUTO
 	fi
 	local image="$(echo "$results" | grep "$3" | grep +$LDP_BOARD | head -n 1)"
 	if [ -z "$image" ]; then
@@ -45,7 +45,7 @@ LC_main(){
 	echo "Using image: $image_url"
 	if [ -z "$4" ]; then
 		echo "$LDP_BLOCK_devices"
-		return 0
+		return $LDP_AUTO
 	elif [ -z "$(echo \"$LDP_BLOCK_devices\" | grep $4)" ]; then
 		echo "$4 is not in:"
 		echo "$LDP_BLOCK_devices"

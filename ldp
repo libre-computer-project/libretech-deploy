@@ -1,16 +1,32 @@
 #!/bin/bash
 
-set -e -o pipefail
+set -e
 
 LDP_VENDOR=$(cat /sys/class/dmi/id/board_vendor)
 LDP_BOARD=$(cat /sys/class/dmi/id/board_name)
 
 LDP_main(){
+	if [ "$LDP_AUTO" -eq 1 ]; then
+		if grep 'deploy=' /proc/cmdline > /dev/null; then
+			LDP_TIME_waitForSync
+			local deploy=$(sed -e 's/.*deploy=\(\"[^"]*\"\|[^ ]*\).*/\1/' -e 's/^"//' -e 's/"$//' /proc/cmdline)
+			if [ -z "$deploy" ]; then
+				echo "Auto Deploy detected but parse failed."
+				read -n 1 -p "Press any key to acknowledge..."
+				return 1
+			else
+				echo "Auto Deploy: $deploy"
+			fi
+			LDP_AUTO_main
+			set -- $deploy
+		else
+			return 1
+		fi
+	fi
 	if [ -z "$1" ]; then
 		echo "$0 VENDOR [PATH]" >&2
 		exit 1
 	fi
-
 	VENDOR="${1^^}"
 	shift
 	if type -t ${VENDOR}_main > /dev/null; then
@@ -19,7 +35,7 @@ LDP_main(){
 		${VENDOR}_main $@
 	else
 		echo "$1 is not supported." >&2
-		exit 1
+		return 1
 	fi
 }
 LDP_main "$@"

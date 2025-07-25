@@ -1,0 +1,15 @@
+#!/bin/bash
+if [ -z "$LDP_AUTO" ]; then
+	LDP_AUTO=0
+fi
+LDP_AUTO_exitTrap(){
+	if [ $? -ne 0 ]; then
+		read -n 1 -p "Auto Deploy ***FAILED***. Press any key to acknowledge..."
+	else
+		read -n 1 -p "Auto Deploy completed. Press any key to shutdown..."
+		shutdown -P now
+	fi
+}
+LDP_AUTO_main(){
+	trap LDP_AUTO_exitTrap EXIT
+}

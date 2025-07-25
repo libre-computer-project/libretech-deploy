@@ -1,0 +1,13 @@
+#!/bin/bash
+
+LDP_TIME_waitForSync(){
+	SECONDS=0
+	local linefeed=0
+	while [ ! -e "/run/systemd/timesync/synchronized" ]; do
+		echo -en "\rSynchronizing System Time: ${SECONDS}s"
+		local linefeed=1
+	done
+	if [ "$linefeed" -eq 1 ]; then
+		echo
+	fi
+}
