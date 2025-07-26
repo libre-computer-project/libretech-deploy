@@ -42,7 +42,7 @@ LC_main(){
 	fi
 
 	local image_url="$path_url/$image"
-	echo "Using image: $image_url"
+	echo "Using image: $image_url" >&2
 	if [ -z "$4" ]; then
 		echo "$LDP_BLOCK_devices"
 		return $LDP_AUTO
@@ -52,4 +52,7 @@ LC_main(){
 		exit 1
 	fi
 	LDP_BLOCK_flashURLRaw "$image_url" "$4"
+	if [ ! -z "$LDP_GUI_RUN" ]; then
+		rm "$LDP_GUI_RUN"
+	fi
 }

@@ -1,41 +1,55 @@
 #!/bin/bash
-
 set -e
 
-LDP_VENDOR=$(cat /sys/class/dmi/id/board_vendor)
-LDP_BOARD=$(cat /sys/class/dmi/id/board_name)
+LDP_SELF=$(readlink -f $0)
+LDP_PREFIX="LDP_"
+LDP_MAIN="_main"
+LDP_HW_VENDOR=$(cat /sys/class/dmi/id/board_vendor)
+LDP_HW_BOARD=$(cat /sys/class/dmi/id/board_name)
 
 LDP_main(){
-	if [ "$LDP_AUTO" -eq 1 ]; then
-		if grep 'deploy=' /proc/cmdline > /dev/null; then
-			LDP_TIME_waitForSync
-			local deploy=$(sed -e 's/.*deploy=\(\"[^"]*\"\|[^ ]*\).*/\1/' -e 's/^"//' -e 's/"$//' /proc/cmdline)
-			if [ -z "$deploy" ]; then
-				echo "Auto Deploy detected but parse failed."
-				read -n 1 -p "Press any key to acknowledge..."
+	if [ ! -z "$ldp_gui" ] && [ "$ldp_gui" -eq 1 ] || [ "${1,,}" = "gui" ]; then
+		${LDP_PREFIX}GUI${LDP_MAIN}
+	elif [ ! -z "$ldp_service" ]; then
+		if [ "$ldp_service" -eq 1 ]; then
+			if grep "$LDP_SERVICE_CMDLINE" "$LDP_SERVICE_CMDLINE_FILE" > /dev/null; then
+				LDP_SERVICE=2 weston-terminal --shell=$LDP_SELF
+			else
+				LDP_GUI=1 weston-terminal --shell=$LDP_SELF
+			fi
+		elif [ "$ldp_service" -eq 2 ]; then
+			local deploy_args=$(sed -e 's/.*deploy=\(\"[^"]*\"\|[^ ]*\).*/\1/' -e 's/^"//' -e 's/"$//' "$LDP_SERVICE_CMDLINE_FILE")
+			if [ -z "$deploy_args" ]; then
+				echo "Auto Deploy detected but argument parse failed." >&2
+				read -n 1 -p "Press any key to acknowledge..." >&2
 				return 1
 			else
-				echo "Auto Deploy: $deploy"
+				echo "Auto Deploy: $deploy_args" >&2
 			fi
-			LDP_AUTO_main
-			set -- $deploy
+			${LDP_PREFIX}SERVICE${LDP_MAIN}
+			$LDP_SELF $deploy_args
+		fi
+	else
+		if [ -z "$1" ]; then
+			local sw_vendors=$(declare -F | grep -v $LDP_PREFIX | grep $LDP_MAIN | cut -f 3 -d ' ' | sed "s/$LDP_MAIN//")
+			echo "${sw_vendors,,}"
+			exit 1
+		elif [ "$1" = "-h" ] || [ "$1" == "--help" ]; then
+			echo "$0 VENDOR [PATH]" >&2
+			echo "$0 GUI" >&2
+			exit 1
+		fi
+		LDP_SW_VENDOR="${1^^}"
+		shift
+		if type -t ${LDP_SW_VENDOR}_main > /dev/null; then
+			${LDP_PREFIX}BLOCK_setEnv
+			${LDP_PREFIX}ARCH_setEnv
+			${LDP_PREFIX}TIME_waitForSync
+			${LDP_SW_VENDOR}${LDP_MAIN} $@
 		else
+			echo "$1 is not supported." >&2
 			return 1
 		fi
 	fi
-	if [ -z "$1" ]; then
-		echo "$0 VENDOR [PATH]" >&2
-		exit 1
-	fi
-	VENDOR="${1^^}"
-	shift
-	if type -t ${VENDOR}_main > /dev/null; then
-		LDP_BLOCK_setEnv
-		LDP_ARCH_setEnv
-		${VENDOR}_main $@
-	else
-		echo "$1 is not supported." >&2
-		return 1
-	fi
 }
-LDP_main "$@"
+LDP${LDP_MAIN} "$@"

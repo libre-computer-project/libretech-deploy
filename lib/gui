@@ -1,0 +1,99 @@
+#!/bin/bash
+LDP_GUI_TITLE="Libre Computer Deployment"
+LDP_GUI_main(){
+	LDP_GUI_RUN=$(mktemp)
+	trap "rm -f $LDP_GUI_RUN" EXIT
+
+	local -a deploy_args
+
+	while true; do
+		local output=$(LDP_GUI_RUN=$LDP_GUI_RUN $LDP_SELF ${deploy_args[@]})
+
+		if [ ! -f "$LDP_GUI_RUN" ]; then
+			echo "$output"
+			break
+		fi
+
+		if [ -z "$output" ]; then
+			if [ ${#deploy_args[@]} -gt 0 ]; then
+				dialog --msgbox "Deploy returned no results. Going back." 0 0
+				unset 'deploy_args[${#deploy_args[@]}-1]'
+			else
+				dialog --msgbox "Deploy exception occurred." 0 0
+				break
+			fi
+			continue
+		fi
+
+		local -a options=()
+		while IFS= read -r line; do
+			if [ -n "$line" ]; then
+				local options+=("$line")
+			fi
+		done <<< "$output"
+
+		local -A tag_to_option=()
+		local -A tags_used=()
+		local -a menu_items=()
+		local filename_counter=1
+		for option in "${options[@]}"; do
+			local tag
+			local candidate
+			local orig
+			local count
+			if [[ "$option" =~ \. ]]; then
+				candidate="$filename_counter"
+				orig="$candidate"
+				count=0
+				while [ -n "${tags_used[$candidate]}" ]; do
+					count=$((count+1))
+					candidate="${orig}${count}"
+				done
+				tag="$candidate"
+				filename_counter=$((filename_counter+1))
+			else
+				candidate="${option:0:1}"
+				orig="$candidate"
+				count=0
+				while [ -n "${tags_used[$candidate]}" ]; do
+					count=$((count+1))
+					candidate="${orig}${count}"
+				done
+				tag="$candidate"
+			fi
+			tags_used[$tag]=1
+			menu_items+=("$tag" "$option")
+			tag_to_option[$tag]="$option"
+		done
+
+		local cancel_label
+		if [ ${#args[@]} -gt 0 ]; then
+			cancel_label="Back"
+		else
+			cancel_label="Quit"
+		fi
+
+		dialog --title "$LDP_GUI_TITLE" --cancel-label "$cancel_label" --menu "Select next argument:" 0 0 0 "${menu_items[@]}" 2>$LDP_GUI_RUN
+		local choice=$(cat $LDP_GUI_RUN)
+		local dialog_ret=$?
+
+		if [ -z "$choice" ]; then
+			if [ ${#deploy_args[@]} -gt 0 ]; then
+				unset 'deploy_args[${#deploy_args[@]}-1]'
+			else
+				break
+			fi
+		elif [ $dialog_ret -eq 0 ]; then
+			local selected="${tag_to_option[$choice]}"
+			if [ -n "$selected" ]; then
+				deploy_args+=("$selected")
+			fi
+		else
+			dialog --msgbox "Deploy selection exception $dialog_ret occurred." 0 0
+			break
+		fi
+	done
+}
+
+ldp_gui=$LDP_GUI
+unset LDP_GUI

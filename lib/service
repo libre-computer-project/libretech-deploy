@@ -1,0 +1,16 @@
+#!/bin/bash
+LDP_SERVICE_CMDLINE="deploy="
+LDP_SERVICE_CMDLINE_FILE="/proc/cmdline"
+LDP_SERVICE_exitTrap(){
+	if [ $? -ne 0 ]; then
+		read -n 1 -p "Auto Deploy ***FAILED***. Press any key to acknowledge."
+	else
+		read -n 1 -p "Auto Deploy completed. Press any key to shutdown."
+		shutdown -P now
+	fi
+}
+LDP_SERVICE_main(){
+	trap LDP_SERVICE_exitTrap EXIT
+}
+ldp_service=$LDP_SERVICE
+unset LDP_SERVICE

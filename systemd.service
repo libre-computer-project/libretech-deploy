@@ -10,10 +10,10 @@ User=root
 Group=root
 Environment=WAYLAND_DISPLAY=wayland-1
 Environment=XDG_RUNTIME_DIR=/run/user/0
-Environment=LDP_AUTO=1
+Environment=LDP_SERVICE=1
 StandardOutput=journal
 StandardError=journal
-ExecStart=/usr/bin/weston-terminal -m --shell=/root/deploy
+ExecStart=/root/deploy
 Restart=no
 
 [Install]
