@@ -52,5 +52,6 @@ DEBIAN_main(){
 	LDP_BLOCK_flashURLTar "$image_url" "$3"
 	if [ ! -z "$LDP_GUI_RUN" ]; then
 		rm "$LDP_GUI_RUN"
+		unset LDP_GUI_RUN
 	fi
 }

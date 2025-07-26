@@ -1,17 +1,30 @@
 #!/bin/bash
 LDP_GUI_TITLE="Libre Computer Deployment"
+LDP_GUI_exitTrap(){
+	rm -f "$LDP_GUI_RUN"
+	if [ $? -ne 0 ]; then
+		read -n 1 -p "Deploy ***FAILED***."
+	else
+		read -n 1 -p "Deploy completed."
+	fi
+}
 LDP_GUI_main(){
 	LDP_GUI_RUN=$(mktemp)
-	trap "rm -f $LDP_GUI_RUN" EXIT
+	trap LDP_GUI_exitTrap EXIT
 
 	local -a deploy_args
 
 	while true; do
 		local output=$(LDP_GUI_RUN=$LDP_GUI_RUN $LDP_SELF ${deploy_args[@]})
-
+		local ret=$?
+		if [ $ret -ne 0 ]; then
+			echo "$output" >&2
+			echo "ERROR: $ret" >&2
+			return 1
+		fi
 		if [ ! -f "$LDP_GUI_RUN" ]; then
 			echo "$output"
-			break
+			return
 		fi
 
 		if [ -z "$output" ]; then
