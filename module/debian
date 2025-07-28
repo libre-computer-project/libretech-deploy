@@ -14,7 +14,7 @@ DEBIAN_main(){
 	if [ ! -z "$1" ]; then
 		local path_url="$path_url/daily/latest"
 	fi
-	local html=$(curl "$path_url/")
+	local html=$(wget -O - "$path_url/")
 	if [ $? -ne 0 ]; then
 		echo "$VENDOR $@ is not supported." >&2
 		return 1

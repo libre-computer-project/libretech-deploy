@@ -9,7 +9,7 @@ LC_main(){
 	local path=("${@:1:2}")
 	local path=$(IFS=/; echo "${path[*]}")
 	local path_url="$LC_BASE_URL/$path"
-	local html=$(curl "$path_url/")
+	local html=$(wget -O - "$path_url/")
 	if [ $? -ne 0 ]; then
 		echo "$VENDOR $@ is not supported." >&2
 		return 1
