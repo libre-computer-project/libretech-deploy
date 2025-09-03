@@ -5,6 +5,7 @@ LC_checkInput(){
 	:
 }
 LC_main(){
+	set -x
 	LC_checkInput "$@"
 	local path=("${@:1:2}")
 	local path=$(IFS=/; echo "${path[*]}")
@@ -25,14 +26,14 @@ LC_main(){
 		return $LDP_AUTO
 	fi
 	if [ -z "$3" ]; then
-		local variants="$(echo "$results" | grep +LDP_BOARD)"
+		local variants="$(echo "$results" | grep +$LDP_HW_BOARD)"
 		if [ -z "$variants" ]; then
 			local variants="$(echo "$results" | grep +$LDP_ARCH)"
 		fi
 		echo "$variants"
 		return $LDP_AUTO
 	fi
-	local image="$(echo "$results" | grep "$3" | grep +$LDP_BOARD | head -n 1)"
+	local image="$(echo "$results" | grep "$3" | grep +$LDP_HW_BOARD | head -n 1)"
 	if [ -z "$image" ]; then
 		local image="$(echo "$results" | grep "$3" | grep +$LDP_ARCH | head -n 1)"
 	fi
@@ -56,4 +57,5 @@ LC_main(){
 		rm "$LDP_GUI_RUN"
 		unset LDP_GUI_RUN
 	fi
+	set +x
 }
