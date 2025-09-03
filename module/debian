@@ -1,8 +1,8 @@
 #!/bin/bash
 DEBIAN_VENDOR="DEBIAN"
-DEBIAN_BASE_URL='https://cdimage.debian.org/images/cloud'
+DEBIAN_BASE_URL='https://cloud.debian.org/images/cloud'
 DEBIAN_RELEASE_IGNORE="OpenStack\|stretch\|buster\|bullseye"
-DEBIAN_VARIANT_IGNORE="azure\|ec2\|genericcloud\|nocloud"
+DEBIAN_VARIANT_IGNORE="azure\|ec2\|genericcloud\|generic"
 DEBIAN_checkInput(){
 	:
 }
@@ -49,7 +49,7 @@ DEBIAN_main(){
 		echo "$LDP_BLOCK_devices"
 		exit 1
 	fi
-	LDP_BLOCK_flashURLTar "$image_url" "$3"
+	LDP_BLOCK_flashURLTarXZ "$image_url" "$3"
 	if [ ! -z "$LDP_GUI_RUN" ]; then
 		rm "$LDP_GUI_RUN"
 		unset LDP_GUI_RUN
