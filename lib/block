@@ -47,3 +47,6 @@ LDP_BLOCK_flashURLTar(){
 LDP_BLOCK_flashURLRaw(){
 	_LDP_BLOCK_flashURL "$@" "bsdcat"
 }
+LDP_BLOCK_flashURLTarXZ(){
+	_LDP_BLOCK_flashURL "$@" "tar -xJf - -O"
+}
