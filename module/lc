@@ -5,7 +5,6 @@ LC_checkInput(){
 	:
 }
 LC_main(){
-	set -x
 	LC_checkInput "$@"
 	local path=("${@:1:2}")
 	local path=$(IFS=/; echo "${path[*]}")
