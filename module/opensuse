@@ -14,7 +14,6 @@ OPENSUSE_main(){
 	if [ ! -z "$1" ]; then
 		local path_url="$path_url/appliances"
 	fi
-	echo $path_url
 	local html=$(wget -O - "$path_url/")
 	if [ $? -ne 0 ]; then
 		echo "$VENDOR $@ is not supported." >&2
