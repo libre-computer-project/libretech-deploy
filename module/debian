@@ -12,14 +12,14 @@ DEBIAN_checkInput(){
 }
 DEBIAN_main(){
 	DEBIAN_checkInput "$@"
-	local path=("${@:1:1}")
-	local path=$(IFS=/; echo "${path[*]}")
-	local path_url="$DEBIAN_BASE_URL/$path"
 	local release=$1
 	local variant=$2
 	local block_device=$3
+	local path_url="$DEBIAN_BASE_URL"
 	if [ ! -z "$release" ]; then
-		local path_url="$path_url/$DEBIAN_RELEASE_URL_SUFFIX"
+		local path=("${@:1:1}")
+		local path=$(IFS=/; echo "${path[*]}")
+		local path_url="$path_url/$path/$DEBIAN_RELEASE_URL_SUFFIX"
 	fi
 	local html=$(wget -O - "$path_url/")
 	if [ $? -ne 0 ]; then
