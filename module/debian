@@ -1,8 +1,12 @@
 #!/bin/bash
 DEBIAN_VENDOR="DEBIAN"
 DEBIAN_BASE_URL='https://cloud.debian.org/images/cloud'
+DEBIAN_RELEASE_URL_SUFFIX='daily/latest'
+DEBIAN_RELEASE_VARIANT_XPATH='//table[contains(@class, 'indexlist')]//td[contains(@class, 'indexcolname')]//a[not(@href="../") and not(starts-with(@href, "/"))]/text()'
+DEBIAN_RELEASE_VARIANT_REGEX='s/\/$//'
 DEBIAN_RELEASE_IGNORE="OpenStack\|stretch\|buster\|bullseye"
-DEBIAN_VARIANT_IGNORE="azure\|ec2\|genericcloud\|generic"
+DEBIAN_VARIANT_IGNORE="azure\|ec2\|genericcloud\|generic\|SHA512SUMS"
+DEBIAN_IMAGE_FILE_SUFFIX="\\-${LDP_ARCH}.*\.tar\.xz"
 DEBIAN_checkInput(){
 	:
 }
@@ -11,45 +15,48 @@ DEBIAN_main(){
 	local path=("${@:1:1}")
 	local path=$(IFS=/; echo "${path[*]}")
 	local path_url="$DEBIAN_BASE_URL/$path"
-	if [ ! -z "$1" ]; then
-		local path_url="$path_url/daily/latest"
+	local release=$1
+	local variant=$2
+	local block_device=$3
+	if [ ! -z "$release" ]; then
+		local path_url="$path_url/$DEBIAN_RELEASE_URL_SUFFIX"
 	fi
 	local html=$(wget -O - "$path_url/")
 	if [ $? -ne 0 ]; then
-		echo "$VENDOR $@ is not supported." >&2
+		echo "$DEBIAN_VENDOR $@ is not supported." >&2
 		return 1
 	fi
-	local results="$(echo "$html" | xmllint --html --xpath '//table[contains(@class, 'indexlist')]//td[contains(@class, 'indexcolname')]//a[not(@href="../") and not(starts-with(@href, "/"))]/text()' - 2>/dev/null | grep -v "$DEBIAN_RELEASE_IGNORE")"
+	local results="$(echo "$html" | xmllint --html --xpath "$DEBIAN_RELEASE_VARIANT_XPATH" - 2>/dev/null | grep -v "$DEBIAN_RELEASE_IGNORE")"
 	if [ $? -ne 0 ] || [ -z "$results" ]; then
-		echo "$VENDOR $@ is not supported." >&2
+		echo "$DEBIAN_VENDOR $@ is not supported." >&2
 		return 1
 	fi
-	local results="$(echo "$results" | grep -v SHA512SUMS | sed 's/\/$//')"
-	if [ -z "$1" ]; then
+	local results="$(echo "$results" | sed "$DEBIAN_RELEASE_VARIANT_REGEX")"
+	if [ -z "$release" ]; then
 		echo "$results"
 		return $LDP_AUTO
 	fi
-	local results_arch=$(echo "$results" | grep -v "$DEBIAN_VARIANT_IGNORE" | grep \\-$LDP_ARCH | grep '\.tar\.')
-	if [ -z "$2" ]; then
+	local results_arch=$(echo "$results" | grep -v "$DEBIAN_VARIANT_IGNORE" | grep "$DEBIAN_IMAGE_FILE_SUFFIX\$")
+	if [ -z "$variant" ]; then
 		echo "$results_arch" 
 		return $LDP_AUTO
 	fi
-	local image="$(echo "$results_arch" | grep "$2" | head -n 1)"
+	local image="$(echo "$results_arch" | grep "$variant" | head -n 1)"
 	if [ -z "$image" ]; then
-		echo "$VENDOR $@ is not supported." >&2
+		echo "$DEBIAN_VENDOR $@ is not supported." >&2
 		exit 1
 	fi
 	local image_url="$path_url/$image"
 	echo "Using image: $image_url" >&2
-	if [ -z "$3" ]; then
+	if [ -z "$block_device" ]; then
 		echo "$LDP_BLOCK_devices"
 		return $LDP_AUTO
-	elif [ -z "$(echo \"$LDP_BLOCK_devices\" | grep $3)" ]; then
-		echo "$3 is not in:"
+	elif [ -z "$(echo \"$LDP_BLOCK_devices\" | grep $block_device)" ]; then
+		echo "$block_device is not in:"
 		echo "$LDP_BLOCK_devices"
 		exit 1
 	fi
-	LDP_BLOCK_flashURLTarXZ "$image_url" "$3"
+	LDP_BLOCK_flashURLTarXZ "$image_url" "$block_device"
 	if [ ! -z "$LDP_GUI_RUN" ]; then
 		rm "$LDP_GUI_RUN"
 		unset LDP_GUI_RUN
