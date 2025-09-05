@@ -1,8 +1,16 @@
 #!/bin/bash
 FEDORA_VENDOR="FEDORA"
 FEDORA_BASE_URL='https://download.fedoraproject.org/pub/fedora/linux/releases'
+FEDORA_VARIANT_URL_SUFFIX="$LDP_ARCH_CPU/images"
+FEDORA_RELEASE_VARIANT_XPATH='//a[not(starts-with(@href, "/")) and not(contains(@href, "?")) and substring(normalize-space(text()), string-length(normalize-space(text())) - string-length("/") + 1, string-length("/")) = "/"]/@href'
+FEDORA_RELEASE_VARIANT_REGEX='s/^ href="//;s/"$//;s/\/$//'
 FEDORA_RELEASE_IGNORE="^[0-9]\$\|[123][0-9]"
+FEDORA_RELEASE_RESULTS_MAX=3
 FEDORA_VARIANT_IGNORE="COMPOSE_ID\|Cloud\|Containe\|COSMIC-Atomic\|Everything\|Kinoite\|Onyx\|Sericea\|Silverblue\|\.\."
+FEDORA_VARIANT_REGEX='s/^\.\///'
+FEDORA_IMAGE_FILE_SUFFIX=".${LDP_ARCH_CPU}.raw.xz"
+FEDORA_IMAGE_FILE_XPATH="//a[substring(@href, string-length(@href) - string-length('${FEDORA_IMAGE_FILE_SUFFIX}') + 1, ${#FEDORA_IMAGE_FILE_SUFFIX}) = '${FEDORA_IMAGE_FILE_SUFFIX}']/@href"
+FEDORA_IMAGE_FILE_REGEX='s/^ href="//;s/"$//'
 FEDORA_checkInput(){
 	:
 }
@@ -11,52 +19,54 @@ FEDORA_main(){
 	local path=("${@:1:2}")
 	local path=$(IFS=/; echo "${path[*]}")
 	local path_url="$FEDORA_BASE_URL/$path"
-	if [ ! -z "$2" ]; then
-		local path_url="$path_url/$LDP_ARCH_CPU/images"
+	local release=$1
+	local variant=$2
+	local block_device=$3
+	if [ ! -z "$variant" ]; then
+		local path_url="$path_url/$FEDORA_VARIANT_URL_SUFFIX"
 	fi
 	local html=$(wget -O - "$path_url/")
 	if [ $? -ne 0 ]; then
-		echo "$VENDOR $@ is not supported." >&2
+		echo "$FEDORA_VENDOR $@ is not supported." >&2
 		return 1
 	fi
-	if [ -z "$1" ] || [ -z "$2" ]; then
-		local html_xpath='//a[not(starts-with(@href, "/")) and not(contains(@href, "?")) and substring(normalize-space(text()), string-length(normalize-space(text())) - string-length("/") + 1, string-length("/")) = "/"]/@href'
+	if [ -z "$release" ] || [ -z "$variant" ]; then
+		local html_xpath="$FEDORA_RELEASE_VARIANT_XPATH"
 	else
-		local filename_match=".$LDP_ARCH_CPU.raw.xz"
-		local html_xpath="//a[substring(@href, string-length(@href) - string-length('$filename_match') + 1, string-length('$filename_match')) = '$filename_match']/@href"
+		local html_xpath="$FEDORA_IMAGE_FILE_XPATH"
 	fi
 	local results="$(echo "$html" | xmllint --html --xpath "$html_xpath" - 2>/dev/null)"
 	if [ $? -ne 0 ] || [ -z "$results" ]; then
-		echo "$VENDOR $@ is not supported." >&2
+		echo "$FEDORA_VENDOR $@ is not supported." >&2
 		return 1
 	fi
-	if [ -z "$1" ] || [ -z "$2" ]; then
-		local results="$(echo "$results" | sed 's/^ href="//;s/"$//;s/\/$//')"
+	if [ -z "$release" ] || [ -z "$variant" ]; then
+		local results="$(echo "$results" | sed "$FEDORA_RELEASE_VARIANT_REGEX")"
 	fi
-	if [ -z "$1" ]; then
-		echo "$results" | grep -v "$FEDORA_RELEASE_IGNORE" | sort -V | tail -n 3
+	if [ -z "$release" ]; then
+		echo "$results" | grep -v "$FEDORA_RELEASE_IGNORE" | sort -V | tail -n $FEDORA_RELEASE_RESULTS_MAX
 		return $LDP_AUTO
 	fi
-	if [ -z "$2" ]; then
-		echo "$results" | sed 's/^\.\///' | grep -v "$FEDORA_VARIANT_IGNORE"
+	if [ -z "$variant" ]; then
+		echo "$results" | sed "$FEDORA_VARIANT_REGEX" | grep -v "$FEDORA_VARIANT_IGNORE"
 		return $LDP_AUTO
 	fi
-	local image="$(echo "$results" | sed 's/^ href="//;s/"$//' | head -n 1)"
+	local image="$(echo "$results" | sed "$FEDORA_IMAGE_FILE_REGEX" | head -n 1)"
 	if [ -z "$image" ]; then
-		echo "$VENDOR $@ is not supported." >&2
+		echo "$FEDORA_VENDOR $@ is not supported." >&2
 		exit 1
 	fi
 	local image_url="$path_url/$image"
 	echo "Using image: $image_url" >&2
-	if [ -z "$3" ]; then
+	if [ -z "$block_device" ]; then
 		echo "$LDP_BLOCK_devices"
 		return $LDP_AUTO
-	elif [ -z "$(echo \"$LDP_BLOCK_devices\" | grep $3)" ]; then
-		echo "$3 is not in:"
+	elif [ -z "$(echo \"$LDP_BLOCK_devices\" | grep $block_device)" ]; then
+		echo "$block_device is not in:"
 		echo "$LDP_BLOCK_devices"
 		exit 1
 	fi
-	LDP_BLOCK_flashURLRaw "$image_url" "$3"
+	LDP_BLOCK_flashURLRaw "$image_url" "$block_device"
 	if [ ! -z "$LDP_GUI_RUN" ]; then
 		rm "$LDP_GUI_RUN"
 		unset LDP_GUI_RUN
