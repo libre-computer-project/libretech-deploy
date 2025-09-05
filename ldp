@@ -43,7 +43,6 @@ LDP_main(){
 		shift
 		if type -t ${LDP_SW_VENDOR}_main > /dev/null; then
 			${LDP_PREFIX}BLOCK_setEnv
-			${LDP_PREFIX}ARCH_setEnv
 			${LDP_PREFIX}TIME_waitForSync
 			${LDP_SW_VENDOR}${LDP_MAIN} $@
 		else

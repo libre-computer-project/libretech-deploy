@@ -1,10 +1,10 @@
 #!/bin/bash
 
-LDP_ARCH_setEnv(){
+#LDP_ARCH_setEnv(){
 	LDP_ARCH_CPU=`uname -m`
 	case $LDP_ARCH_CPU in
 		aarch64)
 			LDP_ARCH=arm64
 			;;
 	esac
-}
+#}
