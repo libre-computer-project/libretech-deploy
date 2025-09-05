@@ -4,6 +4,7 @@ OPENSUSE_BASE_URL='http://download.opensuse.org/ports/aarch64'
 OPENSUSE_RELEASE_XPATH='//a[not(starts-with(@href, "/")) and not(contains(@href, "?")) and substring(normalize-space(text()), string-length(normalize-space(text())) - string-length("/") + 1, string-length("/")) = "/"]/text()'
 OPENSUSE_RELEASE_REGEX='s/\/$//'
 OPENSUSE_RELEASE_RESULTS_MAX=3
+OPENSUSE_RELEASE_URL_SUFFIX="appliances"
 OPENSUSE_VARIANT_REGEX='s/^ href=".\///;s/"$//'
 OPENSUSE_IMAGE_FILE_SUFFIX=".${LDP_ARCH_CPU}.raw.xz"
 OPENSUSE_IMAGE_FILE_XPATH="//a[substring(@href, string-length(@href) - string-length('$filename_match') + 1, string-length('$filename_match')) = '$filename_match']/@href"
@@ -15,14 +16,14 @@ OPENSUSE_checkInput(){
 }
 OPENSUSE_main(){
 	OPENSUSE_checkInput "$@"
-	local path=("${@:1:1}")
-	local path=$(IFS=/; echo "${path[*]}")
-	local path_url="$OPENSUSE_BASE_URL/$path"
 	local release=$1
 	local variant=$2
 	local block_device=$3
+	local path_url="$OPENSUSE_BASE_URL"
 	if [ ! -z "$release" ]; then
-		local path_url="$path_url/appliances"
+		local path=("${@:1:1}")
+		local path=$(IFS=/; echo "${path[*]}")
+		local path_url="$OPENSUSE_BASE_URL/$path/$OPENSUSE_RELEASE_URL_SUFFIX"
 	fi
 	local html=$(wget -O - "$path_url/")
 	if [ $? -ne 0 ]; then
@@ -44,7 +45,7 @@ OPENSUSE_main(){
 		echo "$results" | grep -v "$OPENSUSE_RELEASE_IGNORE" | tail -n $OPENSUSE_RELEASE_RESULTS_MAX
 		return $LDP_AUTO
 	fi
-	local results="$(echo "$results" | sed "$OPENSUSE_VARIANT_REGEX" | grep -v "$OPENSUSE_VARIANT_IGNORE" | grep "$OPENSUSE_VARIANT_ACCEPT" | uniq)"
+	local results="$(echo "$results" | sed "$OPENSUSE_VARIANT_REGEX" | grep -v "$OPENSUSE_VARIANT_IGNORE" | grep "$OPENSUSE_IMAGE_FILE_SUFFIX\$" | grep "$OPENSUSE_VARIANT_ACCEPT" | uniq)"
 	if [ -z "$variant" ]; then
 		echo "$results"
 		return $LDP_AUTO
