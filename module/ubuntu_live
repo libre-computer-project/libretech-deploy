@@ -1,0 +1,73 @@
+#!/bin/bash
+UBUNTU_LIVE_VENDOR="UBUNTU LIVE"
+UBUNTU_LIVE_BASE_URL='https://cdimage.ubuntu.com/releases'
+UBUNTU_LIVE_RELEASE_ACCEPT='^[0-9.]{5}$'
+UBUNTU_LIVE_RELEASE_MIN=22.04
+UBUNTU_LIVE_RELEASE_RESULTS_MAX=10
+UBUNTU_LIVE_RELEASE_URL_SUFFIX='release'
+UBUNTU_LIVE_RELEASE_XPATH='//a[not(starts-with(@href, "/")) and not(contains(@href, "?")) and substring(normalize-space(text()), string-length(normalize-space(text())), string-length("/")) = "/"]/@href'
+UBUNTU_LIVE_IMAGE_FILE_SUFFIX=".iso"
+UBUNTU_LIVE_IMAGE_FILE_XPATH="//a[substring(@href, string-length(@href) - string-length('${UBUNTU_LIVE_IMAGE_FILE_SUFFIX}') + 1, ${#UBUNTU_LIVE_IMAGE_FILE_SUFFIX}) = '${UBUNTU_LIVE_IMAGE_FILE_SUFFIX}']/@href"
+UBUNTU_LIVE_RELEASE_VARIANT_REGEX='s/^ href="//;s/"$//;s/\/$//'
+UBUNTU_LIVE_VARIANT_ACCEPT="$LDP_ARCH"
+UBUNTU_LIVE_checkInput(){
+	:
+}
+UBUNTU_LIVE_main(){
+	UBUNTU_LIVE_checkInput "$@"
+	local release=$1
+	local variant=$2
+	local block_device=$3
+	local path_url="$UBUNTU_LIVE_BASE_URL"
+	if [ ! -z "$release" ]; then
+		local path=("${@:1:1}")
+		path=$(IFS=/; echo "${path[*]}")
+		path_url="$path_url/$path/$UBUNTU_LIVE_RELEASE_URL_SUFFIX"
+	fi
+	local html=$(wget -O - "$path_url/")
+	if [ $? -ne 0 ]; then
+		echo "$UBUNTU_LIVE_VENDOR $@ is not supported." >&2
+		return 1
+	fi
+	if [ -z "$release" ]; then
+		local html_xpath="$UBUNTU_LIVE_RELEASE_XPATH"
+	else
+		local html_xpath="$UBUNTU_LIVE_IMAGE_FILE_XPATH"
+	fi
+	local results="$(echo "$html" | xmllint --html --xpath "$html_xpath" - 2>/dev/null)"
+	if [ $? -ne 0 ] || [ -z "$results" ]; then
+		echo "$UBUNTU_LIVE_VENDOR $@ is not supported." >&2
+		return 1
+	fi
+	results="$(echo "$results" | sed "$UBUNTU_LIVE_RELEASE_VARIANT_REGEX")"
+	if [ -z "$release" ]; then
+		results="$(echo "$results" | grep -E "$UBUNTU_LIVE_RELEASE_ACCEPT" | grep -A "$UBUNTU_LIVE_RELEASE_RESULTS_MAX" "$UBUNTU_LIVE_RELEASE_MIN")"
+		echo "$results"
+		return $LDP_AUTO
+	fi
+	results=$(echo "$results" | grep "$UBUNTU_LIVE_VARIANT_ACCEPT" | grep "$UBUNTU_LIVE_IMAGE_FILE_SUFFIX\$" | sort | uniq)
+	if [ -z "$variant" ]; then
+		echo "$results" 
+		return $LDP_AUTO
+	fi
+	local image="$(echo "$results" | grep "$variant" | head -n 1)"
+	if [ -z "$image" ]; then
+		echo "$UBUNTU_LIVE_VENDOR $@ is not supported." >&2
+		exit 1
+	fi
+	local image_url="$path_url/$image"
+	echo "Using image: $image_url" >&2
+	if [ -z "$block_device" ]; then
+		echo "$LDP_BLOCK_devices"
+		return $LDP_AUTO
+	elif [ -z "$(echo \"$LDP_BLOCK_devices\" | grep $block_device)" ]; then
+		echo "$block_device is not in:"
+		echo "$LDP_BLOCK_devices"
+		exit 1
+	fi
+	LDP_BLOCK_flashURLRaw "$image_url" "$block_device"
+	if [ ! -z "$LDP_GUI_RUN" ]; then
+		rm "$LDP_GUI_RUN"
+		unset LDP_GUI_RUN
+	fi
+}
