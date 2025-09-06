@@ -2,7 +2,7 @@
 LDP_BLOCK_PREFIX="/dev"
 LDP_BLOCK_setEnv(){
 	LDP_BLOCK_devices=$(lsblk -o NAME -n -d | grep -v mtdblock | grep -v 'boot[0-9]$' || true)
-	if [ -z $LDP_BLOCK_devices ]; then
+	if [ -z "$LDP_BLOCK_devices" ]; then
 		echo "No suitable block devices detected." >&2
 		return 1
 	fi
