@@ -1,11 +1,16 @@
 #!/bin/bash
 LDP_GUI_TITLE="Libre Computer Deployment"
 LDP_GUI_exitTrap(){
-	rm -f "$LDP_GUI_RUN"
-	if [ $? -ne 0 ]; then
-		read -n 1 -p "Deploy ***FAILED***."
+	ret=$?
+	if [ ! -e "$LDP_GUI_RUN" ]; then
+		echo "Deploy cancelled."
 	else
-		read -n 1 -p "Deploy completed."
+		rm -f "$LDP_GUI_RUN"
+		if [ $ret -ne 0 ]; then
+			read -n 1 -p "Deploy ***FAILED***."
+		else
+			read -n 1 -p "Deploy completed."
+		fi
 	fi
 }
 LDP_GUI_main(){
@@ -93,6 +98,7 @@ LDP_GUI_main(){
 			if [ ${#deploy_args[@]} -gt 0 ]; then
 				unset 'deploy_args[${#deploy_args[@]}-1]'
 			else
+				rm "$LDP_GUI_RUN"
 				break
 			fi
 		elif [ $dialog_ret -eq 0 ]; then
