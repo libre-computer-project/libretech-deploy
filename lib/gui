@@ -80,15 +80,14 @@ LDP_GUI_main(){
 		done
 
 		local cancel_label
-		if [ ${#args[@]} -gt 0 ]; then
+		if [ ${#deploy_args[@]} -gt 0 ]; then
 			cancel_label="Back"
 		else
 			cancel_label="Quit"
 		fi
-
-		dialog --title "$LDP_GUI_TITLE" --cancel-label "$cancel_label" --menu "Select next argument:" 0 0 0 "${menu_items[@]}" 2>$LDP_GUI_RUN
+		local dialog_ret=0
+		dialog --title "$LDP_GUI_TITLE" --cancel-label "$cancel_label" --menu "Select next argument:" 0 0 0 "${menu_items[@]}" 2>$LDP_GUI_RUN || dialog_ret=$?
 		local choice=$(cat $LDP_GUI_RUN)
-		local dialog_ret=$?
 
 		if [ -z "$choice" ]; then
 			if [ ${#deploy_args[@]} -gt 0 ]; then
