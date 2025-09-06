@@ -31,7 +31,7 @@ LDP_main(){
 		fi
 	else
 		if [ -z "$1" ]; then
-			local sw_vendors=$(declare -F | grep -v $LDP_PREFIX | grep $LDP_MAIN | cut -f 3 -d ' ' | sed "s/$LDP_MAIN//")
+			local sw_vendors=$(declare -F | grep -v $LDP_PREFIX | grep $LDP_MAIN | cut -f 3 -d ' ' | sed "s/$LDP_MAIN//" | sed 's/_/-/')
 			echo "${sw_vendors,,}"
 			exit 1
 		elif [ "$1" = "-h" ] || [ "$1" == "--help" ]; then
@@ -40,6 +40,7 @@ LDP_main(){
 			exit 1
 		fi
 		LDP_SW_VENDOR="${1^^}"
+		LDP_SW_VENDOR="${LDP_SW_VENDOR//-/_}"
 		shift
 		if type -t ${LDP_SW_VENDOR}_main > /dev/null; then
 			${LDP_PREFIX}BLOCK_setEnv
