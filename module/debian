@@ -18,8 +18,8 @@ DEBIAN_main(){
 	local path_url="$DEBIAN_BASE_URL"
 	if [ ! -z "$release" ]; then
 		local path=("${@:1:1}")
-		local path=$(IFS=/; echo "${path[*]}")
-		local path_url="$path_url/$path/$DEBIAN_RELEASE_URL_SUFFIX"
+		local path_uri=$(IFS=/; echo "${path[*]}")
+		local path_url="$path_url/$path_uri/$DEBIAN_RELEASE_URL_SUFFIX"
 	fi
 	local html=$(wget -O - "$path_url/")
 	if [ $? -ne 0 ]; then
