@@ -21,8 +21,8 @@ UBUNTU_LIVE_main(){
 	local path_url="$UBUNTU_LIVE_BASE_URL"
 	if [ ! -z "$release" ]; then
 		local path=("${@:1:1}")
-		path=$(IFS=/; echo "${path[*]}")
-		path_url="$path_url/$path/$UBUNTU_LIVE_RELEASE_URL_SUFFIX"
+		local path_uri=$(IFS=/; echo "${path[*]}")
+		path_url="$path_url/$path_uri/$UBUNTU_LIVE_RELEASE_URL_SUFFIX"
 	fi
 	local html=$(wget -O - "$path_url/")
 	if [ $? -ne 0 ]; then
