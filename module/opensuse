@@ -45,7 +45,7 @@ OPENSUSE_main(){
 		echo "$results" | grep -v "$OPENSUSE_RELEASE_IGNORE" | tail -n $OPENSUSE_RELEASE_RESULTS_MAX
 		return $LDP_AUTO
 	fi
-	local results="$(echo "$results" | sed "$OPENSUSE_VARIANT_REGEX" | grep -v "$OPENSUSE_VARIANT_IGNORE" | grep "$OPENSUSE_IMAGE_FILE_SUFFIX\$" | grep "$OPENSUSE_VARIANT_ACCEPT" | uniq)"
+	local results="$(echo "$results" | sed "$OPENSUSE_VARIANT_REGEX" | grep -v "$OPENSUSE_VARIANT_IGNORE" | grep "$OPENSUSE_VARIANT_ACCEPT" | grep "$OPENSUSE_IMAGE_FILE_SUFFIX\$" | sort | uniq)"
 	if [ -z "$variant" ]; then
 		echo "$results"
 		return $LDP_AUTO
