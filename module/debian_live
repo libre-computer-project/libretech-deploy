@@ -1,0 +1,50 @@
+#!/bin/bash
+DEBIAN_LIVE_VENDOR="DEBIAN_LIVE"
+DEBIAN_LIVE_BASE_URL="https://cdimage.debian.org/cdimage/weekly-live-builds/${LDP_ARCH}/iso-hybrid"
+DEBIAN_LIVE_RELEASE_VARIANT_XPATH='//table[contains(@class, 'indexlist')]//td[contains(@class, 'indexcolname')]//a[not(@href="../") and not(starts-with(@href, "/"))]/text()'
+DEBIAN_LIVE_RELEASE_VARIANT_REGEX='s/\/$//'
+DEBIAN_LIVE_IMAGE_FILE_SUFFIX=".iso"
+DEBIAN_LIVE_checkInput(){
+	:
+}
+DEBIAN_LIVE_main(){
+	DEBIAN_LIVE_checkInput "$@"
+	local release=$1
+	local block_device=$2
+	local path_url="$DEBIAN_LIVE_BASE_URL"
+	local html=$(wget -O - "$path_url/")
+	if [ $? -ne 0 ]; then
+		echo "$DEBIAN_LIVE_VENDOR $@ is not supported." >&2
+		return 1
+	fi
+	local results="$(echo "$html" | xmllint --html --xpath "$DEBIAN_LIVE_RELEASE_VARIANT_XPATH" - 2>/dev/null)"
+	if [ $? -ne 0 ] || [ -z "$results" ]; then
+		echo "$DEBIAN_LIVE_VENDOR $@ is not supported." >&2
+		return 1
+	fi
+	local results="$(echo "$results" | grep "$DEBIAN_LIVE_IMAGE_FILE_SUFFIX\$" | sed "$DEBIAN_LIVE_RELEASE_VARIANT_REGEX")"
+	if [ -z "$release" ]; then
+		echo "$results"
+		return $LDP_AUTO
+	fi
+	local image="$(echo "$results" | grep "$variant" | head -n 1)"
+	if [ -z "$image" ]; then
+		echo "$DEBIAN_LIVE_VENDOR $@ is not supported." >&2
+		exit 1
+	fi
+	local image_url="$path_url/$image"
+	echo "Using image: $image_url" >&2
+	if [ -z "$block_device" ]; then
+		echo "$LDP_BLOCK_devices"
+		return $LDP_AUTO
+	elif [ -z "$(echo \"$LDP_BLOCK_devices\" | grep $block_device)" ]; then
+		echo "$block_device is not in:"
+		echo "$LDP_BLOCK_devices"
+		exit 1
+	fi
+	LDP_BLOCK_flashURLRaw "$image_url" "$block_device"
+	if [ ! -z "$LDP_GUI_RUN" ]; then
+		rm "$LDP_GUI_RUN"
+		unset LDP_GUI_RUN
+	fi
+}
