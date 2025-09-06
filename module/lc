@@ -1,40 +1,50 @@
 #!/bin/bash
 LC_VENDOR="LC"
 LC_BASE_URL='https://distro.libre.computer/ci'
+LC_DISTRO_RELEASE_VARIANT_XPATH='//a[not(@href="../") and not(starts-with(@href, "?"))]/text()'
+LC_DISTRO_RELEASE_VARIANT_REGEX='s/\/$//'
+LC_VARIANT_IGNORE="SHA512SUMS"
 LC_checkInput(){
 	:
 }
 LC_main(){
 	LC_checkInput "$@"
-	local path=("${@:1:2}")
-	local path=$(IFS=/; echo "${path[*]}")
-	local path_url="$LC_BASE_URL/$path"
+	local distro=$1
+	local release=$2
+	local variant=$3
+	local block_device=$4
+	local path_url="$LC_BASE_URL"
+	if [ ! -z "$distro" ]; then
+		local path=("${@:1:2}")
+		local path_uri=$(IFS=/; echo "${path[*]}")
+		path_url="$path_url/$path_uri"
+	fi
 	local html=$(wget -O - "$path_url/")
 	if [ $? -ne 0 ]; then
-		echo "$VENDOR $@ is not supported." >&2
+		echo "$LC_VENDOR $@ is not supported." >&2
 		return 1
 	fi
-	local results="$(echo "$html" | xmllint --html --xpath '//a[not(@href="../") and not(starts-with(@href, "?"))]/text()' - 2>/dev/null)"
+	local results="$(echo "$html" | xmllint --html --xpath "$LC_DISTRO_RELEASE_VARIANT_XPATH" - 2>/dev/null)"
 	if [ $? -ne 0 ] || [ -z "$results" ]; then
-		echo "$VENDOR $@ is not supported." >&2
+		echo "$LC_VENDOR $@ is not supported." >&2
 		return 1
 	fi
-	local results="$(echo "$results" | grep -v SHA256SUMS | sed 's/\/$//')"
-	if [ -z "$2" ]; then
+	local results="$(echo "$results" | sed "$LC_DISTRO_RELEASE_VARIANT_REGEX")"
+	if [ -z "$release" ]; then
 		echo "$results"
 		return $LDP_AUTO
 	fi
-	if [ -z "$3" ]; then
-		local variants="$(echo "$results" | grep +$LDP_HW_BOARD)"
+	if [ -z "$variant" ]; then
+		local variants="$(echo "$results" | grep -v "$LC_VARIANT_IGNORE" | grep +$LDP_HW_BOARD)"
 		if [ -z "$variants" ]; then
 			local variants="$(echo "$results" | grep +$LDP_ARCH)"
 		fi
 		echo "$variants"
 		return $LDP_AUTO
 	fi
-	local image="$(echo "$results" | grep "$3" | grep +$LDP_HW_BOARD | head -n 1)"
+	local image="$(echo "$results" | grep "$variant" | grep +$LDP_HW_BOARD | head -n 1)"
 	if [ -z "$image" ]; then
-		local image="$(echo "$results" | grep "$3" | grep +$LDP_ARCH | head -n 1)"
+		local image="$(echo "$results" | grep "$variant" | grep +$LDP_ARCH | head -n 1)"
 	fi
 	if [ -z "$image" ]; then
 		echo "$VENDOR $@ is not supported." >&2
@@ -43,18 +53,17 @@ LC_main(){
 
 	local image_url="$path_url/$image"
 	echo "Using image: $image_url" >&2
-	if [ -z "$4" ]; then
+	if [ -z "$block_device" ]; then
 		echo "$LDP_BLOCK_devices"
 		return $LDP_AUTO
-	elif [ -z "$(echo \"$LDP_BLOCK_devices\" | grep $4)" ]; then
-		echo "$4 is not in:"
+	elif [ -z "$(echo \"$LDP_BLOCK_devices\" | grep $block_device)" ]; then
+		echo "$block_device is not in:"
 		echo "$LDP_BLOCK_devices"
 		exit 1
 	fi
-	LDP_BLOCK_flashURLRaw "$image_url" "$4"
+	LDP_BLOCK_flashURLRaw "$image_url" "$block_device"
 	if [ ! -z "$LDP_GUI_RUN" ]; then
 		rm "$LDP_GUI_RUN"
 		unset LDP_GUI_RUN
 	fi
-	set +x
 }
