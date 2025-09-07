@@ -1,4 +1,7 @@
 #!/bin/bash
+#
+# provide dialog interface for deploy command mode
+
 LDP_GUI_TITLE="Libre Computer Deployment"
 LDP_GUI_exitTrap(){
 	ret=$?

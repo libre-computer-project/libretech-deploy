@@ -1,4 +1,11 @@
 #!/bin/bash
+#
+# 1. check gui from LDP_GUI environment and first argument
+# 2. check systemd service mode for auto deploy or gui
+# 2a. check for auto deploy in cmdline
+# 2b. if auto deploy, launch self in auto deploy mode
+# 3. command mode
+
 set -e
 
 LDP_SELF=$(readlink -f $0)

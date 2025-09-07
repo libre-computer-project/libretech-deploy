@@ -1,4 +1,14 @@
 #!/bin/bash
+#
+# detects and handles systemd auto deploy service or normal gui
+# 1. systemd auto deploy service sets LDP_SERVICE to 1
+# 2. save LDP_SERVICE variable to ldp_service
+# 3. unsets LDP_SERVICE
+# 4. ldp will search cmdline for LDP_SERVICE_CMDLINE in LDP_SERVICE_CMDLINE_FILE
+# 5. if found, sets LDP_SERVICE to 2 to indicate auto deploy
+# 6. launch new instance to handle auto deploy via LDP_SERVICE=2
+# 7. if not found, display normal deploy GUI
+
 LDP_SERVICE_CMDLINE="deploy="
 LDP_SERVICE_CMDLINE_FILE="/proc/cmdline"
 LDP_SERVICE_exitTrap(){

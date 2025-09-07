@@ -1,4 +1,6 @@
 #!/bin/bash
+#
+# time is necessary for https
 
 LDP_TIME_waitForSync(){
 	SECONDS=0

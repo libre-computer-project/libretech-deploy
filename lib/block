@@ -1,4 +1,7 @@
 #!/bin/bash
+#
+# LDP_BLOCK_devices is populated by LDP_BLOCK_setEnv
+
 LDP_BLOCK_PREFIX="/dev"
 LDP_BLOCK_setEnv(){
 	LDP_BLOCK_devices=$(lsblk -o NAME -n -d | grep -v mtdblock | grep -v 'boot[0-9]$' || true)
@@ -28,6 +31,7 @@ _LDP_BLOCK_clearDevice(){
 		echo "Partition table on $block_device cleared." >&2
 	fi
 }
+
 _LDP_BLOCK_flashURL(){
 	local block_device="$LDP_BLOCK_PREFIX/$2"
 	LDP_BLOCK_checkDevice "$2"
@@ -47,6 +51,7 @@ LDP_BLOCK_flashURLTar(){
 LDP_BLOCK_flashURLRaw(){
 	_LDP_BLOCK_flashURL "$@" "bsdcat"
 }
+# for images where bsd libarchive bug during extraction
 LDP_BLOCK_flashURLTarXZ(){
 	_LDP_BLOCK_flashURL "$@" "tar -xJf - -O"
 }
