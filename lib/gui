@@ -91,7 +91,7 @@ LDP_GUI_main(){
 			cancel_label="Quit"
 		fi
 		local dialog_ret=0
-		dialog --title "$LDP_GUI_TITLE" --cancel-label "$cancel_label" --menu "Select next argument:" 0 0 0 "${menu_items[@]}" 2>$LDP_GUI_RUN || dialog_ret=$?
+		dialog --title "$LDP_GUI_TITLE" --cancel-label "$cancel_label" --menu "Select Choice:" 0 0 0 "${menu_items[@]}" 2>$LDP_GUI_RUN || dialog_ret=$?
 		local choice=$(cat $LDP_GUI_RUN)
 
 		if [ -z "$choice" ]; then
