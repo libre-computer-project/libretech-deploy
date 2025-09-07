@@ -3,16 +3,17 @@
 # provide dialog interface for deploy command mode
 
 LDP_GUI_TITLE="Libre Computer Deployment"
+LDP_GUI_PROMPT="Select From Below:"
 LDP_GUI_exitTrap(){
 	ret=$?
-	if [ ! -e "$LDP_GUI_RUN" ]; then
-		echo "Deploy cancelled."
+	if [ -e "$LDP_GUI_RUN" ]; then
+		read -n 1 -p "Deploy cancelled."
+		rm "$LDP_GUI_RUN"
 	else
-		rm -f "$LDP_GUI_RUN"
-		if [ $ret -ne 0 ]; then
-			read -n 1 -p "Deploy ***FAILED***."
-		else
+		if [ $ret -eq 0 ]; then
 			read -n 1 -p "Deploy completed."
+		else
+			read -n 1 -p "Deploy ***FAILED***."
 		fi
 	fi
 }
@@ -94,20 +95,24 @@ LDP_GUI_main(){
 			cancel_label="Quit"
 		fi
 		local dialog_ret=0
-		dialog --title "$LDP_GUI_TITLE" --cancel-label "$cancel_label" --menu "Select Choice:" 0 0 0 "${menu_items[@]}" 2>$LDP_GUI_RUN || dialog_ret=$?
-		local choice=$(cat $LDP_GUI_RUN)
-
-		if [ -z "$choice" ]; then
+		dialog --title "$LDP_GUI_TITLE" --cancel-label "$cancel_label" --menu "$LDP_GUI_PROMPT" 0 0 0 "${menu_items[@]}" 2>$LDP_GUI_RUN || dialog_ret=$?
+		if [ $dialog_ret -eq 0 ]; then
+			local choice=$(cat $LDP_GUI_RUN)
+			if [ -z "$choice" ]; then
+				dialog --msgbox "Deploy selection empty exception occurred." 0 0
+			else
+				local selected="${tag_to_option[$choice]}"
+				if [ -n "$selected" ]; then
+					deploy_args+=("$selected")
+				fi
+			fi
+		elif [ $dialog_ret -eq 1 ]; then
 			if [ ${#deploy_args[@]} -gt 0 ]; then
+				# back
 				unset 'deploy_args[${#deploy_args[@]}-1]'
 			else
-				rm "$LDP_GUI_RUN"
-				break
-			fi
-		elif [ $dialog_ret -eq 0 ]; then
-			local selected="${tag_to_option[$choice]}"
-			if [ -n "$selected" ]; then
-				deploy_args+=("$selected")
+				# quit
+				return
 			fi
 		else
 			dialog --msgbox "Deploy selection exception $dialog_ret occurred." 0 0
