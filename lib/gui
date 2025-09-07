@@ -7,13 +7,21 @@ LDP_GUI_PROMPT="Select From Below:"
 LDP_GUI_exitTrap(){
 	ret=$?
 	if [ -e "$LDP_GUI_RUN" ]; then
-		read -n 1 -p "Deploy cancelled."
 		rm "$LDP_GUI_RUN"
+		read -n 1 -p "Deploy cancelled. Press any key to acknowledge."
 	else
 		if [ $ret -eq 0 ]; then
-			read -n 1 -p "Deploy completed."
+			read -n 1 -p "Deploy completed. Press s to shutdown, r to reboot, or any key to acknowledge." key
+			case "${key,,}" in
+				's')
+					shutdown
+					;;
+				'r')
+					reboot
+					;;
+			esac
 		else
-			read -n 1 -p "Deploy ***FAILED***."
+			read -n 1 -p "Deploy ***FAILED***. Press any key to acknowledge."
 		fi
 	fi
 }
@@ -24,9 +32,9 @@ LDP_GUI_main(){
 	local -a deploy_args
 
 	while true; do
-		local output=$(LDP_GUI_RUN=$LDP_GUI_RUN $LDP_SELF ${deploy_args[@]})
-		local ret=$?
-		if [ $ret -ne 0 ]; then
+		local ldp_ret=0
+		local output=$(LDP_GUI_RUN=$LDP_GUI_RUN $LDP_SELF "${deploy_args[@]}") || ldp_ret=$?
+		if [ $ldp_ret -ne 0 ]; then
 			echo "$output" >&2
 			echo "ERROR: $ret" >&2
 			return 1
@@ -42,7 +50,7 @@ LDP_GUI_main(){
 				unset 'deploy_args[${#deploy_args[@]}-1]'
 			else
 				dialog --msgbox "Deploy exception occurred." 0 0
-				break
+				return
 			fi
 			continue
 		fi
@@ -116,7 +124,7 @@ LDP_GUI_main(){
 			fi
 		else
 			dialog --msgbox "Deploy selection exception $dialog_ret occurred." 0 0
-			break
+			return
 		fi
 	done
 }
