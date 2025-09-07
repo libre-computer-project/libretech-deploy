@@ -13,7 +13,7 @@ DEBIAN_LIVE_main(){
 	local block_device=$2
 	local path_url="$DEBIAN_LIVE_BASE_URL"
 	local html=$(wget -O - "$path_url/")
-	if [ $? -ne 0 ]; then
+	if [ $? -ne 0 ] || [ -z "$html" ]; then
 		echo "$DEBIAN_LIVE_VENDOR $@ is not supported." >&2
 		return 1
 	fi

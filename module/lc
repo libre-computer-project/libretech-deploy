@@ -20,7 +20,7 @@ LC_main(){
 		path_url="$path_url/$path_uri"
 	fi
 	local html=$(wget -O - "$path_url/")
-	if [ $? -ne 0 ]; then
+	if [ $? -ne 0 ] || [ -z "$html" ]; then
 		echo "$LC_VENDOR $@ is not supported." >&2
 		return 1
 	fi
