@@ -64,10 +64,8 @@ FEDORA_main(){
 	if [ -z "$block_device" ]; then
 		echo "$LDP_BLOCK_devices"
 		return $LDP_AUTO
-	elif [ -z "$(echo \"$LDP_BLOCK_devices\" | grep $block_device)" ]; then
-		echo "$block_device is not in:" >&2
-		echo "$LDP_BLOCK_devices" >&2
-		exit 1
+	else
+		_LDP_BLOCK_checkDevice "$block_device"
 	fi
 	LDP_BLOCK_flashURLRaw "$image_url" "$block_device"
 	if [ ! -z "$LDP_GUI_RUN" ]; then

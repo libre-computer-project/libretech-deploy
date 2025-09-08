@@ -32,6 +32,14 @@ _LDP_BLOCK_clearDevice(){
 	fi
 }
 
+_LDP_BLOCK_checkDevice(){
+	if [ -z "$(echo \"$LDP_BLOCK_devices\" | grep "$1")" ]; then
+		echo "$1 is not in:" >&2
+		echo "$LDP_BLOCK_devices" >&2
+		return 1
+	fi
+}
+
 _LDP_BLOCK_flashURL(){
 	local block_device="$LDP_BLOCK_PREFIX/$2"
 	LDP_BLOCK_checkDevice "$2"
