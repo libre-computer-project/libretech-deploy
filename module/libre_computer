@@ -1,19 +1,19 @@
 #!/bin/bash
-LC_VENDOR="LC"
-LC_BASE_URL='https://distro.libre.computer/ci'
-LC_DISTRO_RELEASE_VARIANT_XPATH='//a[not(@href="../") and not(starts-with(@href, "?"))]/text()'
-LC_DISTRO_RELEASE_VARIANT_REGEX='s/\/$//'
-LC_VARIANT_IGNORE="SHA512SUMS"
-LC_checkInput(){
+LIBRE_COMPUTER_VENDOR="LIBRE_COMPUTER"
+LIBRE_COMPUTER_BASE_URL='https://distro.libre.computer/ci'
+LIBRE_COMPUTER_DISTRO_RELEASE_VARIANT_XPATH='//a[not(@href="../") and not(starts-with(@href, "?"))]/text()'
+LIBRE_COMPUTER_DISTRO_RELEASE_VARIANT_REGEX='s/\/$//'
+LIBRE_COMPUTER_VARIANT_IGNORE="SHA512SUMS"
+LIBRE_COMPUTER_checkInput(){
 	:
 }
-LC_main(){
-	LC_checkInput "$@"
+LIBRE_COMPUTER_main(){
+	LIBRE_COMPUTER_checkInput "$@"
 	local distro=$1
 	local release=$2
 	local variant=$3
 	local block_device=$4
-	local path_url="$LC_BASE_URL"
+	local path_url="$LIBRE_COMPUTER_BASE_URL"
 	if [ ! -z "$distro" ]; then
 		local path=("${@:1:2}")
 		local path_uri=$(IFS=/; echo "${path[*]}")
@@ -21,21 +21,21 @@ LC_main(){
 	fi
 	local html=$(wget -O - "$path_url/")
 	if [ $? -ne 0 ] || [ -z "$html" ]; then
-		echo "$LC_VENDOR $@ is not supported." >&2
+		echo "$LIBRE_COMPUTER_VENDOR $@ is not supported." >&2
 		return 1
 	fi
-	local results="$(echo "$html" | xmllint --html --xpath "$LC_DISTRO_RELEASE_VARIANT_XPATH" - 2>/dev/null)"
+	local results="$(echo "$html" | xmllint --html --xpath "$LIBRE_COMPUTER_DISTRO_RELEASE_VARIANT_XPATH" - 2>/dev/null)"
 	if [ $? -ne 0 ] || [ -z "$results" ]; then
-		echo "$LC_VENDOR $@ is not supported." >&2
+		echo "$LIBRE_COMPUTER_VENDOR $@ is not supported." >&2
 		return 1
 	fi
-	local results="$(echo "$results" | sed "$LC_DISTRO_RELEASE_VARIANT_REGEX")"
+	local results="$(echo "$results" | sed "$LIBRE_COMPUTER_DISTRO_RELEASE_VARIANT_REGEX")"
 	if [ -z "$release" ]; then
 		echo "$results"
 		return $LDP_AUTO
 	fi
 	if [ -z "$variant" ]; then
-		local variants="$(echo "$results" | grep -v "$LC_VARIANT_IGNORE" | grep +$LDP_HW_BOARD)"
+		local variants="$(echo "$results" | grep -v "$LIBRE_COMPUTER_VARIANT_IGNORE" | grep +$LDP_HW_BOARD)"
 		if [ -z "$variants" ]; then
 			local variants="$(echo "$results" | grep +$LDP_ARCH)"
 		fi
@@ -47,7 +47,7 @@ LC_main(){
 		local image="$(echo "$results" | grep "$variant" | grep +$LDP_ARCH | head -n 1)"
 	fi
 	if [ -z "$image" ]; then
-		echo "$VENDOR $@ is not supported." >&2
+		echo "$LIBRE_COMPUTER_VENDOR $@ is not supported." >&2
 		exit 1
 	fi
 
