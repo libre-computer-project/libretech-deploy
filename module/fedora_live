@@ -6,9 +6,11 @@ FEDORA_LIVE_RELEASE_VARIANT_XPATH='//a[not(starts-with(@href, "/")) and not(cont
 FEDORA_LIVE_RELEASE_VARIANT_REGEX='s/^ href="//;s/"$//;s/\/$//'
 FEDORA_LIVE_RELEASE_IGNORE="^[0-9]\$\|[123][0-9]"
 FEDORA_LIVE_RELEASE_RESULTS_MAX=3
-FEDORA_LIVE_VARIANT_IGNORE="COMPOSE_ID\|Cloud\|Containe\|COSMIC-Atomic\|Everything\|Kinoite\|Onyx\|Sericea\|Silverblue\|\.\."
+FEDORA_LIVE_VARIANT_SPECIAL="labs\|server\|spins"
+FEDORA_LIVE_VARIANT_IGNORE="COMPOSE_ID\|Cloud\|Containe\|Onyx\|Sericea\|Silverblue\|\.\."
 FEDORA_LIVE_VARIANT_REGEX='s/^\.\///'
-FEDORA_LIVE_IMAGE_FILE_SUFFIX=".${LDP_ARCH_CPU}.iso"
+FEDORA_LIVE_SUBVARIANT_IGNORE="\.\."
+FEDORA_LIVE_IMAGE_FILE_SUFFIX=".iso"
 FEDORA_LIVE_IMAGE_FILE_XPATH="//a[substring(@href, string-length(@href) - string-length('${FEDORA_LIVE_IMAGE_FILE_SUFFIX}') + 1, ${#FEDORA_LIVE_IMAGE_FILE_SUFFIX}) = '${FEDORA_LIVE_IMAGE_FILE_SUFFIX}']/@href"
 FEDORA_LIVE_IMAGE_FILE_REGEX='s/^ href="//;s/"$//'
 FEDORA_LIVE_checkInput(){
@@ -18,7 +20,14 @@ FEDORA_LIVE_main(){
 	FEDORA_LIVE_checkInput "$@"
 	local release=$1
 	local variant=$2
-	local block_device=$3
+	if [ -z "$(echo "${variant,,}" | grep "$FEDORA_LIVE_VARIANT_SPECIAL")" ]; then
+		local has_subvariant=0
+		local block_device=$3
+	else
+		local has_subvariant=1
+		local subvariant=$3
+		local block_device=$4
+	fi
 	local path_url="$FEDORA_LIVE_BASE_URL"
 	if [ ! -z "$release" ]; then
 		local path=("${@:1:2}")
@@ -43,9 +52,7 @@ FEDORA_LIVE_main(){
 		echo "$FEDORA_LIVE_VENDOR $@ is not supported." >&2
 		return 1
 	fi
-	if [ -z "$release" ] || [ -z "$variant" ]; then
-		local results="$(echo "$results" | sed "$FEDORA_LIVE_RELEASE_VARIANT_REGEX")"
-	fi
+	local results="$(echo "$results" | sed "$FEDORA_LIVE_RELEASE_VARIANT_REGEX")"
 	if [ -z "$release" ]; then
 		echo "$results" | grep -v "$FEDORA_LIVE_RELEASE_IGNORE" | sort -V | tail -n $FEDORA_LIVE_RELEASE_RESULTS_MAX
 		return $LDP_AUTO
@@ -54,7 +61,15 @@ FEDORA_LIVE_main(){
 		echo "$results" | sed "$FEDORA_LIVE_VARIANT_REGEX" | grep -v "$FEDORA_LIVE_VARIANT_IGNORE"
 		return $LDP_AUTO
 	fi
-	local image="$(echo "$results" | sed "$FEDORA_LIVE_IMAGE_FILE_REGEX" | head -n 1)"
+	if [ $has_subvariant -eq 0 ]; then
+		local image="$(echo "$results" | sed "$FEDORA_LIVE_IMAGE_FILE_REGEX" | head -n 1)"
+	else
+		if [ -z "$subvariant" ]; then
+			echo "$results" | sed "$FEDORA_LIVE_VARIANT_REGEX" | grep -v "$FEDORA_LIVE_SUBVARIANT_IGNORE"
+			return $LDP_AUTO
+		fi
+		local image="$(echo "$results" | grep -i "$subvariant" | sed "$FEDORA_LIVE_IMAGE_FILE_REGEX" | head -n 1)"
+	fi
 	if [ -z "$image" ]; then
 		echo "$FEDORA_LIVE_VENDOR $@ is not supported." >&2
 		exit 1
