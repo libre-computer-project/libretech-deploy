@@ -3,9 +3,11 @@
 cd $(readlink -f $(dirname ${BASH_SOURCE[0]}))
 cd ..
 
-echo '#!/bin/bash' > deploy
-cat $(find lib -type f | grep -v "/\\.") >> deploy
-cat $(find module -type f | grep -v "/\\." | grep -v "disabled") >> deploy
-cat ldp >> deploy
-sed -Ei '2,$s/^#!\/bin\/bash//' deploy
-chmod 755 deploy
+output=lc-deploy
+
+echo '#!/bin/bash' > $output
+cat $(find lib -type f | grep -v "/\\.") >> $output
+cat $(find module -type f | grep -v "/\\." | grep -v "disabled") >> $output
+cat ldp >> $output
+sed -Ei '2,$s/^#!\/bin\/bash//' $output
+chmod 755 $output

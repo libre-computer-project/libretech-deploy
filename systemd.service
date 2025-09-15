@@ -1,5 +1,5 @@
 [Unit]
-Description=EtherealOS Auto Deploy Service
+Description=Libre Computer Auto Deploy Service
 After=graphical.target
 Requires=graphical.target
 
@@ -13,7 +13,7 @@ Environment=XDG_RUNTIME_DIR=/run/user/0
 Environment=LDP_SERVICE=1
 StandardOutput=journal
 StandardError=journal
-ExecStart=/root/deploy
+ExecStart=/usr/sbin/lc-deploy
 Restart=no
 
 [Install]
